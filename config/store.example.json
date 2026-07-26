@@ -1,0 +1,23 @@
+{
+  "tenantId": "example-store",
+  "brand": {
+    "name": "Example Store",
+    "shortName": "STORE",
+    "description": "Productos seleccionados para vos.",
+    "accentColor": "#f04a3a"
+  },
+  "locale": "es-AR",
+  "currency": "ARS",
+  "pickup": {
+    "enabled": true,
+    "label": "Retiro en el local",
+    "address": "Dirección del local"
+  },
+  "links": {
+    "mainSite": "https://example.com"
+  },
+  "integrations": {
+    "commerceApiUrl": "http://ecommerce-api:8080",
+    "paymentsApiUrl": "http://mercadopago:8080"
+  }
+}
