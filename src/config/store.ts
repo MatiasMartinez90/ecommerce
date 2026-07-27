@@ -17,6 +17,8 @@ export interface StoreConfig {
   };
   links: {
     mainSite: string;
+    storeUrl: string;
+    mediaBaseUrl: string;
   };
   integrations: {
     commerceApiUrl: string;
@@ -35,6 +37,8 @@ export function validateStoreConfig(value: StoreConfig): StoreConfig {
   if (!CURRENCY_PATTERN.test(value.currency)) throw new Error("currency inválida");
   for (const candidate of [
     value.links.mainSite,
+    value.links.storeUrl,
+    value.links.mediaBaseUrl,
     value.integrations.commerceApiUrl,
     value.integrations.paymentsApiUrl,
   ]) {
@@ -46,5 +50,27 @@ export function validateStoreConfig(value: StoreConfig): StoreConfig {
 }
 
 export function getStoreConfig(): StoreConfig {
-  return validateStoreConfig(defaultConfig as StoreConfig);
+  const serialized = process.env.STORE_CONFIG_JSON;
+  if (!serialized) return validateStoreConfig(defaultConfig as StoreConfig);
+  let value: unknown;
+  try {
+    value = JSON.parse(serialized);
+  } catch {
+    throw new Error("STORE_CONFIG_JSON no contiene JSON válido");
+  }
+  return validateStoreConfig(value as StoreConfig);
+}
+
+export type PublicStoreConfig = Omit<StoreConfig, "integrations">;
+
+export function getPublicStoreConfig(): PublicStoreConfig {
+  const value = getStoreConfig();
+  return {
+    tenantId: value.tenantId,
+    brand: value.brand,
+    locale: value.locale,
+    currency: value.currency,
+    pickup: value.pickup,
+    links: value.links,
+  };
 }

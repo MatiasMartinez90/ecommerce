@@ -14,7 +14,9 @@
     "address": "Dirección del local"
   },
   "links": {
-    "mainSite": "https://example.com"
+    "mainSite": "https://example.com",
+    "storeUrl": "https://shop.example.com",
+    "mediaBaseUrl": "https://media.example.com"
   },
   "integrations": {
     "commerceApiUrl": "http://ecommerce-api:8080",
