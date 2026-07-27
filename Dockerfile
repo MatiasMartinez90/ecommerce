@@ -16,6 +16,10 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack
 RUN addgroup --system --gid 10001 app \
     && adduser --system --uid 10001 --ingroup app app
 COPY --from=builder --chown=app:app /app/.next/standalone ./
