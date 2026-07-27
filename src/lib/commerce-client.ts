@@ -4,8 +4,8 @@ export class CommerceError extends Error {
   }
 }
 
-export async function commerceApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/commerce/${path.replace(/^\//, "")}`, {
+async function apiRequest<T>(basePath: string, path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${basePath}/${path.replace(/^\//, "")}`, {
     ...init,
     cache: "no-store",
     headers: {
@@ -20,4 +20,12 @@ export async function commerceApi<T>(path: string, init?: RequestInit): Promise<
     throw new CommerceError(detail ?? "No pudimos completar la operación.", response.status);
   }
   return payload as T;
+}
+
+export async function commerceApi<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiRequest<T>("/api/commerce", path, init);
+}
+
+export async function paymentsApi<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiRequest<T>("/api/payments", path, init);
 }
