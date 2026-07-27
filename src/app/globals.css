@@ -116,6 +116,14 @@ dd { margin: 0; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .payment-note { margin: 14px 0 28px; padding: 18px; display: flex; flex-direction: column; gap: 5px; border: 1px solid var(--line); }
 .payment-note span { color: var(--muted); font-size: 13px; }
+.checkout-form .payment-options { margin: 18px 0 28px; display: grid; gap: 12px; }
+.checkout-form .payment-options legend { margin-bottom: 12px; }
+.checkout-form .payment-options label { margin: 0; padding: 18px; display: flex; align-items: flex-start; gap: 14px; border: 1px solid var(--line); cursor: pointer; text-transform: none; letter-spacing: 0; }
+.checkout-form .payment-options label.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.checkout-form .payment-options input { width: 18px; height: 18px; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
+.checkout-form .payment-options span { display: grid; gap: 5px; }
+.checkout-form .payment-options strong { color: var(--ink); font-size: 15px; }
+.checkout-form .payment-options small { color: var(--muted); font-size: 13px; font-weight: 400; }
 .checkout-form > .button { width: 100%; }
 .loading { width: 42px; height: 42px; margin: 160px auto; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(1turn); } }

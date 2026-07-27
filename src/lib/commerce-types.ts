@@ -63,3 +63,22 @@ export type Order = {
     line_total: number;
   }>;
 };
+
+export type PaymentPreference = {
+  checkout_url: string;
+  status_token: string;
+  status: string;
+  amount: number;
+  currency: string;
+  expires_at: string;
+  sandbox: boolean;
+};
+
+export type PaymentStatus = {
+  purpose: string;
+  status: string;
+  amount: number;
+  currency: string;
+  expires_at: string;
+  sandbox: boolean;
+};

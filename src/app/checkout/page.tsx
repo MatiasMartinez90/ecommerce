@@ -5,16 +5,20 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/components/cart-provider";
 import { formatMoney, useStore } from "@/components/store-provider";
-import { commerceApi } from "@/lib/commerce-client";
-import type { Order } from "@/lib/commerce-types";
+import { commerceApi, paymentsApi } from "@/lib/commerce-client";
+import type { Order, PaymentPreference } from "@/lib/commerce-types";
+
+type PaymentMethod = "pay_at_store" | "mercado_pago";
 
 export default function CheckoutPage() {
   const { cart, loading, reset } = useCart();
   const config = useStore();
   const idempotencyKey = useRef(crypto.randomUUID());
+  const paymentIdempotencyKey = useRef(crypto.randomUUID());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<Order | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pay_at_store");
   const money = (value: number) => formatMoney(value, config.locale, config.currency);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -29,7 +33,7 @@ export default function CheckoutPage() {
         headers: { "idempotency-key": idempotencyKey.current },
         body: JSON.stringify({
           cart_token: cart.token,
-          payment_method: "pay_at_store",
+          payment_method: paymentMethod,
           customer: {
             name: data.get("name"),
             email: data.get("email"),
@@ -38,6 +42,28 @@ export default function CheckoutPage() {
           customer_notes: data.get("notes"),
         }),
       });
+      if (paymentMethod === "mercado_pago") {
+        try {
+          const preference = await paymentsApi<PaymentPreference>(
+            `shop-orders/${created.id}/preference`,
+            {
+              method: "POST",
+              headers: { "idempotency-key": paymentIdempotencyKey.current },
+              body: JSON.stringify({ cart_token: cart.token }),
+            },
+          );
+          reset();
+          window.location.assign(preference.checkout_url);
+          return;
+        } catch (cause) {
+          setError(
+            cause instanceof Error
+              ? `El pedido quedó reservado, pero no pudimos abrir el pago: ${cause.message}`
+              : "El pedido quedó reservado, pero no pudimos abrir el pago. Reintentá.",
+          );
+          return;
+        }
+      }
       setOrder(created);
       reset();
     } catch (cause) {
@@ -84,9 +110,35 @@ export default function CheckoutPage() {
             </div>
             <label>Notas <small>(opcional)</small><textarea name="notes" rows={4} maxLength={1000} /></label>
           </fieldset>
-          <div className="payment-note"><strong>Pago en el local</strong><span>Abonás cuando retirás el pedido.</span></div>
+          <fieldset className="payment-options" disabled={submitting}>
+            <legend>Forma de pago</legend>
+            <label className={paymentMethod === "pay_at_store" ? "selected" : ""}>
+              <input
+                type="radio"
+                name="payment_method"
+                value="pay_at_store"
+                checked={paymentMethod === "pay_at_store"}
+                onChange={() => setPaymentMethod("pay_at_store")}
+              />
+              <span><strong>Pago en el local</strong><small>Abonás cuando retirás el pedido.</small></span>
+            </label>
+            <label className={paymentMethod === "mercado_pago" ? "selected" : ""}>
+              <input
+                type="radio"
+                name="payment_method"
+                value="mercado_pago"
+                checked={paymentMethod === "mercado_pago"}
+                onChange={() => setPaymentMethod("mercado_pago")}
+              />
+              <span><strong>Mercado Pago</strong><small>Pagás el total ahora en un checkout seguro.</small></span>
+            </label>
+          </fieldset>
           <button className="button" type="submit" disabled={submitting}>
-            {submitting ? "Confirmando…" : `Confirmar pedido · ${money(cart.subtotal)}`}
+            {submitting
+              ? "Confirmando…"
+              : paymentMethod === "mercado_pago"
+                ? `Continuar a Mercado Pago · ${money(cart.subtotal)}`
+                : `Confirmar pedido · ${money(cart.subtotal)}`}
           </button>
         </form>
         <aside className="summary">
