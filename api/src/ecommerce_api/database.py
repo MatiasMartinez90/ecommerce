@@ -4,13 +4,14 @@ from contextlib import asynccontextmanager
 import asyncpg
 
 from .config import Settings
+from .dsn import sanitize_database_url
 
 Pool = asyncpg.Pool
 
 
 async def create_pool(settings: Settings) -> Pool:
     return await asyncpg.create_pool(
-        settings.database_url,
+        sanitize_database_url(settings.database_url),
         min_size=1,
         max_size=10,
         command_timeout=10,
