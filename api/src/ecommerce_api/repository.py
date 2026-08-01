@@ -452,6 +452,12 @@ async def apply_payment_callback(
                 inserted,
             )
             raise CommerceError("payment amount mismatch")
+        if order["payment_method"] != "mercado_pago":
+            await connection.execute(
+                "UPDATE payment_callback_events SET status='ignored',error_code='payment_switched_to_store',processed_at=now() WHERE id=$1",
+                inserted,
+            )
+            return await _load_order(connection, order_id)
         mapped = "rejected" if status in {"rejected", "cancelled"} else status
         order_status = order["status"]
         if status == "approved" and order_status == "pending":
@@ -488,6 +494,35 @@ async def apply_payment_callback(
         await connection.execute(
             "UPDATE payment_callback_events SET status='processed',processed_at=now() WHERE id=$1",
             inserted,
+        )
+        return await _load_order(connection, order_id)
+
+
+async def switch_order_to_store(pool: Pool, order_id: UUID, cart_token: str) -> dict:
+    async with transaction(pool) as connection:
+        order = await connection.fetchrow(
+            """
+            SELECT o.* FROM shop_orders o
+            JOIN shopping_carts c ON c.id=o.cart_id
+            WHERE o.id=$1 AND c.token_hash=$2
+            FOR UPDATE
+            """,
+            order_id,
+            hash_token(cart_token),
+        )
+        if not order:
+            raise CommerceError("order not found")
+        if order["status"] != "pending":
+            raise InvalidOrderTransition("only pending orders can switch to local payment")
+        await connection.execute(
+            """
+            UPDATE shop_orders
+            SET payment_method='pay_at_store', payment_status='unpaid',
+                payment_checkout_url=NULL, payment_provider_status_token=NULL,
+                payment_expires_at=NULL, updated_at=now()
+            WHERE id=$1
+            """,
+            order_id,
         )
         return await _load_order(connection, order_id)
 

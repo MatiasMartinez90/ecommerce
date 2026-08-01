@@ -56,6 +56,7 @@ from .repository import (
     patch_category,
     patch_product,
     set_cart_item,
+    switch_order_to_store,
     transition_order,
 )
 from .security import InvalidSignature, sign_order, validate_callback_signature, verify_order
@@ -238,6 +239,18 @@ async def payment_preference(
         raise commerce_http_error(error) from error
     except PaymentServiceUnavailable as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+@app.post("/v1/shop-orders/{order_id}/pay-at-store", response_model=OrderOut, tags=["payments"])
+async def pay_at_store(
+    order_id: UUID,
+    payload: PaymentPreferenceIn,
+    pool: Annotated[Pool, Depends(pool_for)],
+) -> dict:
+    try:
+        return await switch_order_to_store(pool, order_id, payload.cart_token)
+    except CommerceError as error:
+        raise commerce_http_error(error) from error
 
 
 @app.get("/v1/payment-status/{token}", response_model=PaymentStatusOut, tags=["payments"])
