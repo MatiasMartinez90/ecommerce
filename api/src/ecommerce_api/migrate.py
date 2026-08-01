@@ -6,6 +6,7 @@ from pathlib import Path
 import asyncpg
 
 from .config import get_settings
+from .dsn import sanitize_database_url
 
 MIGRATIONS = Path(
     os.getenv("COMMERCE_MIGRATIONS_DIR", str(Path.cwd() / "db" / "migrations"))
@@ -22,7 +23,7 @@ def migration_up(path: Path) -> str:
 
 async def migrate() -> None:
     connection = await asyncpg.connect(
-        get_settings().database_url,
+        sanitize_database_url(get_settings().database_url),
         command_timeout=30,
         statement_cache_size=0,
     )
