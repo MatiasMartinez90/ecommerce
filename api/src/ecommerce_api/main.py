@@ -14,7 +14,9 @@ from .models import (
     CartCreateIn,
     CartItemSetIn,
     CartOut,
+    CategoryCreateIn,
     CategoryOut,
+    CategoryPatchIn,
     CheckoutIn,
     OrderOut,
     OrderStatusIn,
@@ -22,8 +24,10 @@ from .models import (
     PaymentPreferenceIn,
     PaymentPreferenceOut,
     PaymentStatusOut,
+    ProductCreateIn,
     ProductListOut,
     ProductOut,
+    ProductPatchIn,
     StockAdjustIn,
 )
 from .payments import PaymentServiceUnavailable, create_payment_preference
@@ -33,11 +37,15 @@ from .repository import (
     InvalidOrderTransition,
     StockConflict,
     adjust_stock,
+    admin_categories,
+    admin_order,
     admin_products,
     apply_payment_callback,
     attach_payment_preference,
     checkout,
     create_cart,
+    create_category,
+    create_product,
     get_cart,
     get_order_payment_status,
     get_product,
@@ -45,6 +53,8 @@ from .repository import (
     list_orders,
     list_products,
     order_for_cart,
+    patch_category,
+    patch_product,
     set_cart_item,
     transition_order,
 )
@@ -316,12 +326,52 @@ async def admin_order_status(
 
 
 @app.get(
+    "/v1/admin/orders/{order_id}",
+    response_model=OrderOut,
+    dependencies=[Depends(require_api_key)],
+    tags=["admin"],
+)
+async def admin_order_detail(order_id: UUID, pool: Annotated[Pool, Depends(pool_for)]) -> dict:
+    try:
+        return await admin_order(pool, order_id)
+    except CommerceError as error:
+        raise commerce_http_error(error) from error
+
+
+@app.get(
     "/v1/admin/products",
     dependencies=[Depends(require_api_key)],
     tags=["admin"],
 )
 async def admin_product_list(pool: Annotated[Pool, Depends(pool_for)]) -> list[dict]:
     return await admin_products(pool)
+
+
+@app.post("/v1/admin/products", dependencies=[Depends(require_api_key)], tags=["admin"])
+async def admin_product_create(
+    payload: ProductCreateIn,
+    pool: Annotated[Pool, Depends(pool_for)],
+) -> dict:
+    try:
+        return await create_product(pool, payload.model_dump())
+    except CommerceError as error:
+        raise commerce_http_error(error) from error
+
+
+@app.patch(
+    "/v1/admin/products/{product_id}",
+    dependencies=[Depends(require_api_key)],
+    tags=["admin"],
+)
+async def admin_product_patch(
+    product_id: UUID,
+    payload: ProductPatchIn,
+    pool: Annotated[Pool, Depends(pool_for)],
+) -> dict:
+    try:
+        return await patch_product(pool, product_id, payload.model_dump(exclude_unset=True))
+    except CommerceError as error:
+        raise commerce_http_error(error) from error
 
 
 @app.post(
@@ -337,5 +387,37 @@ async def admin_stock(
 ) -> dict:
     try:
         return await adjust_stock(pool, product_id, payload.delta, payload.reason, actor or "admin")
+    except CommerceError as error:
+        raise commerce_http_error(error) from error
+
+
+@app.get("/v1/admin/categories", dependencies=[Depends(require_api_key)], tags=["admin"])
+async def admin_category_list(pool: Annotated[Pool, Depends(pool_for)]) -> list[dict]:
+    return await admin_categories(pool)
+
+
+@app.post("/v1/admin/categories", dependencies=[Depends(require_api_key)], tags=["admin"])
+async def admin_category_create(
+    payload: CategoryCreateIn,
+    pool: Annotated[Pool, Depends(pool_for)],
+) -> dict:
+    try:
+        return await create_category(pool, payload.model_dump())
+    except CommerceError as error:
+        raise commerce_http_error(error) from error
+
+
+@app.patch(
+    "/v1/admin/categories/{category_id}",
+    dependencies=[Depends(require_api_key)],
+    tags=["admin"],
+)
+async def admin_category_patch(
+    category_id: UUID,
+    payload: CategoryPatchIn,
+    pool: Annotated[Pool, Depends(pool_for)],
+) -> dict:
+    try:
+        return await patch_category(pool, category_id, payload.model_dump(exclude_unset=True))
     except CommerceError as error:
         raise commerce_http_error(error) from error
