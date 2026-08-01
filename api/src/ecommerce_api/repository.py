@@ -581,6 +581,111 @@ async def admin_products(pool: Pool) -> list[dict]:
     return [_product(row) | {key: row[key] for key in ("qty", "min_qty", "active", "sort_order")} for row in rows]
 
 
+async def admin_categories(pool: Pool) -> list[dict]:
+    rows = await pool.fetch(
+        """
+        SELECT c.id, c.slug, c.name, c.description, c.sort_order, c.active,
+               count(p.id)::int AS product_count
+        FROM product_categories c
+        LEFT JOIN products p ON p.category_id = c.id
+        GROUP BY c.id
+        ORDER BY c.sort_order, c.name
+        """
+    )
+    return [dict(row) for row in rows]
+
+
+async def create_category(pool: Pool, payload: dict) -> dict:
+    row = await pool.fetchrow(
+        """
+        INSERT INTO product_categories (slug, name, description, sort_order)
+        VALUES ($1,$2,$3,$4)
+        RETURNING id, slug, name, description, sort_order, active
+        """ ,
+        payload["slug"], payload["name"].strip(), payload.get("description", "").strip(),
+        payload.get("sort_order", 0),
+    )
+    return dict(row)
+
+
+async def patch_category(pool: Pool, category_id: UUID, payload: dict) -> dict:
+    fields = {key: value for key, value in payload.items() if value is not None}
+    if not fields:
+        row = await pool.fetchrow("SELECT id,slug,name,description,sort_order,active FROM product_categories WHERE id=$1", category_id)
+    else:
+        assignments = []
+        values: list[Any] = [category_id]
+        for key, value in fields.items():
+            values.append(value.strip() if isinstance(value, str) else value)
+            assignments.append(f"{key}=${len(values)}")
+        row = await pool.fetchrow(
+            f"UPDATE product_categories SET {', '.join(assignments)},updated_at=now() WHERE id=$1 RETURNING id,slug,name,description,sort_order,active",
+            *values,
+        )
+    if not row:
+        raise CommerceError("category not found")
+    return dict(row)
+
+
+async def create_product(pool: Pool, payload: dict) -> dict:
+    category_id = await _category_id(pool, payload.get("category_slug"))
+    row = await pool.fetchrow(
+        """
+        INSERT INTO products (category_id, name, sku, slug, price, qty, min_qty)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        RETURNING id
+        """,
+        category_id, payload["name"].strip(), payload["sku"].strip(), payload["slug"],
+        payload["price"], payload["qty"], payload.get("min_qty", 0),
+    )
+    return await _admin_product(pool, row["id"])
+
+
+async def patch_product(pool: Pool, product_id: UUID, payload: dict) -> dict:
+    fields = {key: value for key, value in payload.items() if value is not None}
+    if "category_slug" in fields:
+        fields["category_id"] = await _category_id(pool, fields.pop("category_slug"))
+    if "gallery" in fields:
+        fields["gallery"] = json.dumps(fields["gallery"])
+    if not fields:
+        return await _admin_product(pool, product_id)
+    assignments = []
+    values: list[Any] = [product_id]
+    for key, value in fields.items():
+        values.append(value.strip() if isinstance(value, str) else value)
+        assignments.append(f"{key}=${len(values)}")
+    row = await pool.fetchrow(
+        f"UPDATE products SET {', '.join(assignments)},updated_at=now() WHERE id=$1 RETURNING id",
+        *values,
+    )
+    if not row:
+        raise CommerceError("product not found")
+    return await _admin_product(pool, product_id)
+
+
+async def _category_id(pool: Pool, slug: str | None) -> UUID | None:
+    if not slug:
+        return None
+    value = await pool.fetchval("SELECT id FROM product_categories WHERE slug=$1 AND active", slug)
+    if not value:
+        raise CommerceError("category not found")
+    return value
+
+
+async def _admin_product(pool: Pool, product_id: UUID) -> dict:
+    row = await pool.fetchrow(
+        """
+        SELECT p.id,p.name,p.sku,p.slug,p.qty,p.min_qty,p.price,p.active,p.description,
+               p.short_description,p.image_url,p.gallery,p.featured,p.sort_order,c.slug AS category_slug
+        FROM products p LEFT JOIN product_categories c ON c.id=p.category_id WHERE p.id=$1
+        """,
+        product_id,
+    )
+    if not row:
+        raise CommerceError("product not found")
+    return _product(row)
+
+
 async def adjust_stock(pool: Pool, product_id: UUID, delta: int, reason: str, actor: str) -> dict:
     async with transaction(pool) as connection:
         row = await connection.fetchrow(

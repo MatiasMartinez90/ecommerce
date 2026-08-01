@@ -174,6 +174,20 @@ class ProductCreateIn(BaseModel):
     category_slug: str | None = None
 
 
+class CategoryCreateIn(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    slug: str = Field(pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")
+    description: str = Field(default="", max_length=1000)
+    sort_order: int = Field(default=0, ge=0, le=10000)
+
+
+class CategoryPatchIn(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    sort_order: int | None = Field(default=None, ge=0, le=10000)
+    active: bool | None = None
+
+
 class ProductPatchIn(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=160)
     price: int | None = Field(default=None, gt=0, le=1_000_000_000)
