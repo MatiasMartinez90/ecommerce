@@ -8,7 +8,7 @@ async function commerceFetch<T>(
   options: { tags?: string[]; revalidate?: number } = {},
 ): Promise<T> {
   const { integrations } = getStoreConfig();
-  const url = new URL(`/api/v1/shop/${path.replace(/^\//, "")}`, integrations.commerceApiUrl);
+  const url = new URL(`/v1/${path.replace(/^\//, "")}`, integrations.commerceApiUrl);
   const response = await fetch(url, {
     headers: { accept: "application/json" },
     next: { revalidate: options.revalidate ?? 60, tags: options.tags },
@@ -32,7 +32,7 @@ export function getProducts(params: {
     offset: String(params.offset ?? 0),
   });
   if (params.category) search.set("category", params.category);
-  if (params.query) search.set("q", params.query);
+  if (params.query) search.set("search", params.query);
   return commerceFetch(`products?${search}`, { tags: ["products"], revalidate: 60 });
 }
 

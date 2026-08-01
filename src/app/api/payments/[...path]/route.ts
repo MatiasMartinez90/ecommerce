@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStoreConfig } from "@/config/store";
 
-const ORDER_PAYMENT_PATH = /^shop-orders\/[0-9a-f-]{36}\/(preference|pay-at-store)$/i;
+const ORDER_PAYMENT_PATH = /^shop-orders\/[0-9a-f-]{36}\/preference$/i;
 const STATUS_PATH = /^status\/[A-Za-z0-9._~-]{20,1000}$/;
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
@@ -18,7 +18,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     return NextResponse.json({ detail: "Solicitud demasiado grande" }, { status: 413 });
   }
   const { integrations } = getStoreConfig();
-  const target = new URL(`/api/v1/payments/${path}`, integrations.commerceApiUrl);
+  const targetPath = path.startsWith("status/")
+    ? `/v1/payment-status/${path.slice("status/".length)}`
+    : `/v1/${path}`;
+  const target = new URL(targetPath, integrations.commerceApiUrl);
   const headers = new Headers({ accept: "application/json" });
   const contentType = request.headers.get("content-type");
   const idempotencyKey = request.headers.get("idempotency-key");

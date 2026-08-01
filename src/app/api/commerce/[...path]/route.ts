@@ -16,7 +16,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     return NextResponse.json({ detail: "Solicitud demasiado grande" }, { status: 413 });
   }
   const { integrations } = getStoreConfig();
-  const target = new URL(`/api/v1/shop/${path}`, integrations.commerceApiUrl);
+  const target = new URL(`/v1/${path}`, integrations.commerceApiUrl);
   target.search = request.nextUrl.search;
   const headers = new Headers({ accept: "application/json" });
   const contentType = request.headers.get("content-type");

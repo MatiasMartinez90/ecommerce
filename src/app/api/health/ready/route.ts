@@ -4,7 +4,7 @@ import { getStoreConfig } from "@/config/store";
 export async function GET() {
   try {
     const config = getStoreConfig();
-    const target = new URL("/api/v1/shop/categories", config.integrations.commerceApiUrl);
+    const target = new URL("/v1/categories", config.integrations.commerceApiUrl);
     const response = await fetch(target, {
       headers: { accept: "application/json" },
       cache: "no-store",
