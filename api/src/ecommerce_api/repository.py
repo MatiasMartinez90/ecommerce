@@ -513,6 +513,11 @@ async def list_orders(pool: Pool, status: str | None, limit: int, offset: int) -
     return [{**dict(row), "currency": row["currency"].strip()} for row in rows]
 
 
+async def admin_order(pool: Pool, order_id: UUID) -> dict:
+    async with pool.acquire() as connection:
+        return await _load_order(connection, order_id)
+
+
 async def transition_order(
     pool: Pool, order_id: UUID, target: str, note: str, actor: str
 ) -> dict:
@@ -653,7 +658,7 @@ async def patch_product(pool: Pool, product_id: UUID, payload: dict) -> dict:
     values: list[Any] = [product_id]
     for key, value in fields.items():
         values.append(value.strip() if isinstance(value, str) else value)
-        assignments.append(f"{key}=${len(values)}")
+        assignments.append(f"{key}=${len(values)}::jsonb" if key == "gallery" else f"{key}=${len(values)}")
     row = await pool.fetchrow(
         f"UPDATE products SET {', '.join(assignments)},updated_at=now() WHERE id=$1 RETURNING id",
         *values,

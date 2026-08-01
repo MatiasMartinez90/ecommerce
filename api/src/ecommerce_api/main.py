@@ -38,6 +38,7 @@ from .repository import (
     StockConflict,
     adjust_stock,
     admin_categories,
+    admin_order,
     admin_products,
     apply_payment_callback,
     attach_payment_preference,
@@ -320,6 +321,19 @@ async def admin_order_status(
 ) -> dict:
     try:
         return await transition_order(pool, order_id, payload.status, payload.note, actor or "admin")
+    except CommerceError as error:
+        raise commerce_http_error(error) from error
+
+
+@app.get(
+    "/v1/admin/orders/{order_id}",
+    response_model=OrderOut,
+    dependencies=[Depends(require_api_key)],
+    tags=["admin"],
+)
+async def admin_order_detail(order_id: UUID, pool: Annotated[Pool, Depends(pool_for)]) -> dict:
+    try:
+        return await admin_order(pool, order_id)
     except CommerceError as error:
         raise commerce_http_error(error) from error
 
