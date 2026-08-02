@@ -63,6 +63,17 @@ class CartOut(BaseModel):
     expires_at: datetime
 
 
+class AbandonedCartOut(BaseModel):
+    id: UUID
+    customer_email: EmailStr | None
+    status: Literal["abandoned"]
+    last_activity: datetime
+    abandoned_at: datetime
+    recovery_attempts: int
+    total: int
+    item_count: int
+
+
 class CheckoutCustomerIn(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
