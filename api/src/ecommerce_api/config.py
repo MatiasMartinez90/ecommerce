@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     payments_api_key: str = ""
     payments_callback_secret: str = ""
     callback_max_skew_seconds: int = Field(default=300, ge=30, le=900)
+    abandonment_idle_minutes: int = Field(default=24 * 60, ge=15, le=30 * 24 * 60)
+    abandonment_batch_size: int = Field(default=100, ge=1, le=500)
 
     @model_validator(mode="after")
     def validate_runtime(self) -> "Settings":
