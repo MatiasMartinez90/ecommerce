@@ -36,7 +36,9 @@ export default async function ProductPage({ params }: Props) {
       <Link className="back" href="/">← Volver al catálogo</Link>
       <div className="detail-grid">
         <div className="detail-media">
-          {image
+          {product.video_url
+            ? <video className="product-video" controls muted playsInline preload="metadata" poster={image ?? undefined}><source src={product.video_url} type="video/mp4" /></video>
+            : image
             ? (
               // Product media is transformed and cached by the configured media CDN.
               // eslint-disable-next-line @next/next/no-img-element
