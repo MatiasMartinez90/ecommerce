@@ -14,6 +14,7 @@ from .models import (
     CartCreateIn,
     CartItemSetIn,
     CartOut,
+    AbandonedCartOut,
     CategoryCreateIn,
     CategoryOut,
     CategoryPatchIn,
@@ -52,6 +53,7 @@ from .repository import (
     list_categories,
     list_orders,
     list_products,
+    mark_abandoned_carts,
     order_for_cart,
     patch_category,
     patch_product,
@@ -318,6 +320,15 @@ async def admin_order_list(
     offset: int = Query(default=0, ge=0),
 ) -> list[dict]:
     return await list_orders(pool, order_status, limit, offset)
+
+
+@app.post("/v1/admin/carts/abandoned/mark", response_model=list[AbandonedCartOut], dependencies=[Depends(require_api_key)], tags=["admin"])
+async def admin_mark_abandoned_carts(
+    pool: Annotated[Pool, Depends(pool_for)],
+    idle_minutes: int = Query(default=60 * 24, ge=15, le=60 * 24 * 30),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> list[dict]:
+    return await mark_abandoned_carts(pool, idle_minutes=idle_minutes, limit=limit)
 
 
 @app.patch(

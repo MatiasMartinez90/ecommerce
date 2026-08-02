@@ -182,6 +182,41 @@ async def get_cart(pool: Pool, token: str) -> dict:
     return await _render_cart(pool, row, token)
 
 
+async def mark_abandoned_carts(pool: Pool, *, idle_minutes: int, limit: int) -> list[dict]:
+    """Mark stale carts once and return a safe recovery-work queue.
+
+    No contact is sent here. A separate cadence worker can consume this
+    durable result after applying consent, quiet-hours and suppression rules.
+    """
+    rows = await pool.fetch(
+        """
+        WITH candidates AS (
+            SELECT id
+            FROM shopping_carts
+            WHERE status = 'active'
+              AND last_activity < now() - ($1::int * interval '1 minute')
+              AND EXISTS (SELECT 1 FROM shopping_cart_items i WHERE i.cart_id = shopping_carts.id)
+            ORDER BY last_activity
+            LIMIT $2
+            FOR UPDATE SKIP LOCKED
+        )
+        UPDATE shopping_carts c
+        SET status = 'abandoned', abandoned_at = COALESCE(c.abandoned_at, now()), updated_at = now()
+        FROM candidates
+        WHERE c.id = candidates.id
+        RETURNING c.id, c.customer_email, c.status, c.last_activity, c.abandoned_at,
+                  c.recovery_attempts,
+                  (SELECT COALESCE(sum(i.quantity * p.price), 0)::int
+                     FROM shopping_cart_items i JOIN products p ON p.id = i.product_id
+                    WHERE i.cart_id = c.id) AS total,
+                  (SELECT count(*)::int FROM shopping_cart_items i WHERE i.cart_id = c.id) AS item_count
+        """,
+        idle_minutes,
+        limit,
+    )
+    return [dict(row) for row in rows]
+
+
 async def set_cart_item(pool: Pool, token: str, slug: str, quantity: int) -> dict:
     async with transaction(pool) as connection:
         cart = await _cart_row(connection, token, lock=True)
