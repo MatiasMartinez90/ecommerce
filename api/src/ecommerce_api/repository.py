@@ -38,7 +38,7 @@ class InvalidOrderTransition(CommerceError):
 PRODUCT_COLUMNS = """
 p.id, p.slug, p.name, p.sku, p.description, p.short_description,
        c.slug AS category_slug, c.name AS category_name,
-       p.image_url, p.gallery, p.price, p.qty AS available_qty,
+       p.image_url, p.video_url, p.gallery, p.price, p.qty AS available_qty,
        p.qty > 0 AS in_stock, p.featured
 """
 
@@ -648,7 +648,7 @@ async def admin_products(pool: Pool) -> list[dict]:
     rows = await pool.fetch(
         """
         SELECT p.id,p.name,p.sku,p.slug,p.qty,p.min_qty,p.price,p.active,p.description,
-               p.short_description,p.image_url,p.gallery,p.featured,p.sort_order,c.slug AS category_slug
+               p.short_description,p.image_url,p.video_url,p.gallery,p.featured,p.sort_order,c.slug AS category_slug
         FROM products p LEFT JOIN product_categories c ON c.id=p.category_id
         ORDER BY p.name
         """
@@ -706,12 +706,12 @@ async def create_product(pool: Pool, payload: dict) -> dict:
     category_id = await _category_id(pool, payload.get("category_slug"))
     row = await pool.fetchrow(
         """
-        INSERT INTO products (category_id, name, sku, slug, price, qty, min_qty)
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
+            INSERT INTO products (category_id, name, sku, slug, price, qty, min_qty, video_url)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
         RETURNING id
         """,
         category_id, payload["name"].strip(), payload["sku"].strip(), payload["slug"],
-        payload["price"], payload["qty"], payload.get("min_qty", 0),
+        payload["price"], payload["qty"], payload.get("min_qty", 0), str(payload["video_url"]) if payload.get("video_url") else None,
     )
     return await _admin_product(pool, row["id"])
 
@@ -751,7 +751,7 @@ async def _admin_product(pool: Pool, product_id: UUID) -> dict:
     row = await pool.fetchrow(
         """
         SELECT p.id,p.name,p.sku,p.slug,p.qty,p.min_qty,p.price,p.active,p.description,
-               p.short_description,p.image_url,p.gallery,p.featured,p.sort_order,c.slug AS category_slug
+               p.short_description,p.image_url,p.video_url,p.gallery,p.featured,p.sort_order,c.slug AS category_slug
         FROM products p LEFT JOIN product_categories c ON c.id=p.category_id WHERE p.id=$1
         """,
         product_id,

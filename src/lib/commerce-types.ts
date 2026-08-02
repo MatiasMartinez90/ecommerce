@@ -14,6 +14,7 @@ export type Product = {
   category_slug: string | null;
   category_name: string | null;
   image_url: string | null;
+  video_url: string | null;
   gallery: string[];
   price: number;
   available_qty: number;

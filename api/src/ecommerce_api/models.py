@@ -25,6 +25,7 @@ class ProductOut(BaseModel):
     category_slug: str | None
     category_name: str | None
     image_url: str | None
+    video_url: str | None
     gallery: list[str]
     price: int
     available_qty: int
@@ -183,6 +184,7 @@ class ProductCreateIn(BaseModel):
     qty: int = Field(ge=0, le=1_000_000)
     min_qty: int = Field(default=0, ge=0, le=1_000_000)
     category_slug: str | None = None
+    video_url: HttpUrl | None = None
 
 
 class CategoryCreateIn(BaseModel):
@@ -208,6 +210,7 @@ class ProductPatchIn(BaseModel):
     short_description: str | None = Field(default=None, max_length=500)
     category_slug: str | None = None
     image_url: HttpUrl | None = None
+    video_url: HttpUrl | None = None
     gallery: list[HttpUrl] | None = Field(default=None, max_length=12)
     featured: bool | None = None
     sort_order: int | None = None
